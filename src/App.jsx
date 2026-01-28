@@ -590,7 +590,7 @@ const Navbar = ({ onOpenContact }) => {
           <div className="flex items-center gap-4 border-r border-white/20 pr-6">
             {/* INSTAGRAM REMOVED FROM HERE */}
             <a
-              href="#" // Your LinkedIn URL
+              href="www.linkedin.com/in/udayan-nawani-0678692b8"// Your LinkedIn URL
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-400 hover:text-blue-500 transition-colors"
