@@ -658,22 +658,22 @@ const Hero = () => (
     >
       <motion.div
         variants={fadeInUp}
-        className="mb-4 inline-block px-4 py-1 rounded-full border border-purple-500/30 bg-purple-500/10 text-purple-400 text-xs tracking-widest uppercase"
+        className="mb-4 inline-block px-4 py-1 rounded-full border border-purple-500/30 bg-purple-500/10 text-purple-400 text-xs tracking-widest uppercase font-mono"
       >
-        Digital Solutions for Growth
+        Student • Developer • Explorer
       </motion.div>
 
       <motion.h1
         variants={fadeInUp}
         className="text-4xl sm:text-6xl md:text-8xl font-medium text-white tracking-tight leading-[0.95] mb-6 relative w-full text-center"
       >
-        <span className="relative inline-block">TRANSLATING</span>
+        <span className="relative inline-block">LEARNING</span>
 
         <span className="block font-light italic opacity-90 text-purple-500 mt-2">
-          PASSION
+          BY
         </span>
         <span className="block text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-500">
-          INTO REVENUE.
+          BUILDING.
         </span>
       </motion.h1>
 
@@ -681,8 +681,8 @@ const Hero = () => (
         variants={fadeInUp}
         className="mt-4 md:mt-8 max-w-xl mx-auto text-gray-400 text-xs md:text-base leading-relaxed px-4"
       >
-        Understanding the business, the struggles, and the customers—to create
-        revenue-driving digital experiences.
+        Documenting my journey as a Computer Science student at Doon University. 
+        Turning caffeine and curiosity into code, one project at a time.
       </motion.div>
     </motion.div>
   </section>
