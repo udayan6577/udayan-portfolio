@@ -1,0 +1,1118 @@
+import React, { useEffect, useState, useRef, createContext, useContext } from "react";
+import ClickSpark from "./ClickSpark";
+import BlobCursor from "./BlobCursor";
+import emailjs from "@emailjs/browser";
+import ReactGA from "react-ga4"; 
+import Lenis from "lenis"; 
+import { createClient } from "@supabase/supabase-js"; 
+import cafeImg from "./assets/cafe.jpeg";
+import cubePng from "./assets/cube.png";
+import furniHomePng from "./assets/furnihome.png";
+import logoJpg from "./assets/logo.png";
+import hatPng from "./assets/hat1.png";
+import santaPng from "./assets/santa.png";
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
+import {
+  ArrowRight,
+  Menu,
+  X, 
+  Send,
+  ChevronLeft,
+  ChevronRight,
+  Users,
+  Globe,
+  Instagram,
+  MessageCircle,
+  CheckCircle,
+  Plus,
+  Minus,
+  Lock,
+  LogOut
+} from "lucide-react";
+
+// ==========================================
+// CONFIG: SUPABASE
+// ==========================================
+// ⚠️ PASTE YOUR KEYS HERE. 
+const SUPABASE_URL = "https://pkdnndejkhrhdqsvwtuo.supabase.co"; 
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBrZG5uZGVqa2hyaGRxc3Z3dHVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY4MzgzNzIsImV4cCI6MjA4MjQxNDM3Mn0.jK-WWY_gUwVqFV66gI4HjrJkgIvQF7i5A6NSnHDMT90";
+
+// Safety check: Only connect if a valid URL is provided to prevent crashing
+const supabase = (SUPABASE_URL && SUPABASE_URL.startsWith("http")) 
+  ? createClient(SUPABASE_URL, SUPABASE_KEY) 
+  : null;
+
+// ==========================================
+// UTILITY: DETECT MOBILE
+// ==========================================
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+  return isMobile;
+};
+
+// ==========================================
+// SECTION 0: CHRISTMAS ASSETS & THEME
+// ==========================================
+
+const PromoSanta = () => {
+  const [isVisible, setIsVisible] = useState(true);
+  if (!isVisible) return null;
+
+  return (
+    <motion.div
+      className="fixed bottom-2 left-2 md:bottom-4 md:left-4 z-[90] flex flex-col items-center"
+      initial={{ y: 150, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ type: "spring", damping: 12, stiffness: 100, delay: 1 }}
+    >
+      <motion.div
+        className="relative bg-white text-black px-3 py-2 md:px-4 md:py-3 rounded-2xl shadow-xl mb-2 text-center"
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: "spring", delay: 1.8, damping: 8 }}
+      >
+        <button 
+            onClick={() => setIsVisible(false)}
+            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors shadow-sm"
+        >
+            <X size={12} />
+        </button>
+        <h3 className="text-red-600 font-black text-sm md:text-xl leading-none">20% OFF!</h3>
+        <p className="text-[9px] md:text-[10px] font-medium text-gray-600 mt-1">HO HO HO!! MERRY CHRISTMAS!</p>
+        <div className="absolute -bottom-[8px] left-1/2 -translate-x-1/2 w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-l-transparent border-r-transparent border-t-white"></div>
+      </motion.div>
+      <motion.img
+        src={santaPng} 
+        alt="Promo Santa"
+        width="128"
+        height="128"
+        className="w-16 md:w-24 lg:w-32 h-auto filter drop-shadow-lg"
+        animate={{ y: [0, -8, 0] }}
+        transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+      />
+    </motion.div>
+  );
+};
+
+const CandyCane = ({ className, rotation = 0 }) => (
+  <motion.svg 
+    viewBox="0 0 100 100" 
+    className={className} 
+    initial={{ rotate: rotation }}
+    animate={{ rotate: rotation + 10, y: [0, -10, 0] }}
+    transition={{ duration: 4, repeat: Infinity, repeatType: "reverse" }}
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path d="M30 90 V 30 A 20 20 0 0 1 70 30" stroke="white" strokeWidth="12" strokeLinecap="round" />
+    <path d="M30 90 V 30 A 20 20 0 0 1 70 30" stroke="#D42426" strokeWidth="12" strokeLinecap="round" strokeDasharray="10 10" />
+  </motion.svg>
+);
+
+const SantaHatDecor = ({ className, style }) => (
+  <motion.img 
+    src={hatPng}
+    alt="Santa Hat Decoration"
+    loading="lazy" 
+    className={className}
+    style={style}
+    initial={{ rotate: -5 }}
+    animate={{ rotate: 5, scale: [1, 1.05, 1] }}
+    transition={{ duration: 3, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
+  />
+);
+
+const SnowOverlay = () => {
+  const isMobile = useIsMobile();
+  if (isMobile) return null; 
+
+  const particleCount = 20; 
+
+  return (
+    <div className="fixed inset-0 pointer-events-none z-[1]">
+      {[...Array(particleCount)].map((_, i) => (
+        <motion.div
+          key={i}
+          className="absolute bg-white rounded-full opacity-80"
+          initial={{ 
+            x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 300), 
+            y: -20, 
+            scale: Math.random() * 0.5 + 0.3 
+          }}
+          animate={{ 
+            y: (typeof window !== 'undefined' ? window.innerHeight : 800) + 20, 
+            x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 300) 
+          }}
+          transition={{ 
+            duration: Math.random() * 10 + 5, 
+            repeat: Infinity, 
+            ease: "linear",
+            delay: Math.random() * 10
+          }}
+          style={{ width: '6px', height: '6px', filter: 'blur(1px)' }}
+        />
+      ))}
+    </div>
+  )
+}
+
+// ==========================================
+// SECTION 1: CONTEXT & UTILITIES
+// ==========================================
+
+const ScrollContext = createContext({
+  lenis: null,
+});
+
+const useLenis = () => useContext(ScrollContext);
+
+const SmoothScrollWrapper = ({ children }) => {
+  const [lenisInstance, setLenisInstance] = useState(null);
+
+  useEffect(() => {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile) return; 
+
+    const lenis = new Lenis({
+      duration: 1.5,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      direction: 'vertical',
+      gestureDirection: 'vertical',
+      smooth: true,
+      smoothTouch: false,
+      touchMultiplier: 2,
+    });
+
+    setLenisInstance(lenis);
+
+    function raf(time) {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    }
+
+    requestAnimationFrame(raf);
+
+    return () => lenis.destroy();
+  }, []);
+
+  return (
+    <ScrollContext.Provider value={{ lenis: lenisInstance }}>
+      {children}
+    </ScrollContext.Provider>
+  );
+};
+
+const fadeInUp = {
+  hidden: { opacity: 0, y: 30 }, 
+  visible: { 
+    opacity: 1, 
+    y: 0, 
+    transition: { duration: 0.6, ease: [0.25, 0.25, 0.25, 0.75] } 
+  }
+};
+
+const staggerContainer = {
+  hidden: { opacity: 1 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1, delayChildren: 0.1 } 
+  }
+};
+
+const ParallaxGlassShape = ({ className, type = "christmas", speed = 6 }) => {
+  const { scrollYProgress } = useScroll();
+  const y = useTransform(scrollYProgress, [0, 1], [0, 300 * speed]); 
+
+  return (
+    <motion.div style={{ y }} className={`absolute pointer-events-none ${className} z-0`}>
+      <div className="animate-float w-full h-full">
+        <div className={`relative w-full h-full transform preserve-3d`}>
+          <div
+            className={`absolute inset-0 rounded-3xl opacity-90 blur-sm
+            ${
+              type === "cube"
+                ? "bg-gradient-to-br from-red-500/30 via-orange-400/30 to-yellow-200/30"
+                : type === "christmas" 
+                ? "bg-gradient-to-tr from-red-600/40 via-green-500/30 to-white/20"
+                : "bg-gradient-to-tr from-green-500/30 via-red-400/30 to-emerald-300/30"
+            }
+            border border-white/20 shadow-[0_8px_32px_0_rgba(212,36,38,0.2)] backdrop-blur-xl`}
+          >
+            <div className="absolute top-2 left-2 right-2 h-1/2 bg-gradient-to-b from-white/40 to-transparent rounded-t-2xl"></div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+const XSocialIcon = ({ size = 24, className }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className} xmlns="http://www.w3.org/2000/svg">
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+  </svg>
+);
+
+// ==========================================
+// SECTION 2: COMPONENTS (Login & Contact)
+// ==========================================
+
+const ContactModal = ({ isOpen, onClose }) => {
+  const form = useRef();
+  const [isSending, setIsSending] = useState(false);
+
+  const sendEmail = (e) => {
+    e.preventDefault();
+    setIsSending(true);
+    const SERVICE_ID = "service_0z0ymad"; 
+    const TEMPLATE_ID = "template_7u0ahzo"; 
+    const PUBLIC_KEY = "nq3Rv-mgitwtfV7a8";
+
+    emailjs.sendForm(SERVICE_ID, TEMPLATE_ID, form.current, { publicKey: PUBLIC_KEY })
+      .then(() => {
+          ReactGA.event({ category: "Lead", action: "Form Submitted", label: "Contact Modal" })
+          setIsSending(false);
+          alert("Message sent successfully!");
+          e.target.reset();
+          onClose();
+        },
+        (error) => {
+          setIsSending(false);
+          console.error("FAILED...", error.text);
+          alert("Failed to send message.");
+        }
+      );
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+      <motion.div 
+        initial={{ scale: 0.95, opacity: 0 }} 
+        animate={{ scale: 1, opacity: 1 }} 
+        exit={{ scale: 0.95, opacity: 0 }} 
+        className="relative w-full max-w-lg bg-gray-900 border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl max-h-[90vh] overflow-y-auto"
+      >
+        <button onClick={onClose} className="absolute top-4 right-4 md:top-6 md:right-6 text-gray-400 hover:text-white transition-colors"><X size={24} /></button>
+        <h3 className="text-2xl md:text-3xl font-medium text-white mb-2">Tell Us Your Story</h3>
+        <p className="text-gray-400 text-sm mb-6">We don't just want specs. We want to know your goals.</p>
+        <form ref={form} className="space-y-4" onSubmit={sendEmail}>
+          <input type="text" name="name" className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-red-500 transition-colors" placeholder="Name" required />
+          <input type="email" name="email" className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-red-500 transition-colors" placeholder="Email" required />
+          <textarea rows="4" name="message" className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white focus:outline-none focus:border-red-500 transition-colors" placeholder="What are you struggling with right now?" required ></textarea>
+          <button type="submit" disabled={isSending} className={`w-full bg-white text-black font-bold py-4 rounded-xl hover:bg-red-100 transition-colors flex justify-center items-center gap-2 ${isSending ? "opacity-50 cursor-not-allowed" : ""}`}>
+            <span>{isSending ? "Sending..." : "Let's Grow"}</span> {!isSending && <Send size={16} />}
+          </button>
+        </form>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+// ==========================================
+// COMPONENT: ADMIN MODAL (Hidden)
+// ==========================================
+
+// ==========================================
+// COMPONENT: ADMIN MODAL (With Image Upload)
+// ==========================================
+
+const AdminModal = ({ isOpen, onClose }) => {
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [uploadingImage, setUploadingImage] = useState(false); // New state
+
+    // Blog Post State
+    const [postTitle, setPostTitle] = useState("");
+    const [postContent, setPostContent] = useState("");
+    const [postImage, setPostImage] = useState("");
+    const [postDate, setPostDate] = useState("");
+
+    useEffect(() => {
+        if (!supabase) return; 
+        const checkSession = async () => {
+            const { data } = await supabase.auth.getSession();
+            setUser(data.session?.user ?? null);
+        };
+        checkSession();
+    }, [isOpen]);
+
+    const handleLogin = async (e) => {
+        e.preventDefault();
+        if (!supabase) {
+            alert("Supabase keys are missing in the code!");
+            return;
+        }
+        setLoading(true);
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        setLoading(false);
+        if (error) alert(error.message);
+        else setUser(data.user);
+    };
+
+    const handleLogout = async () => {
+        if (!supabase) return;
+        await supabase.auth.signOut();
+        setUser(null);
+    };
+
+    // New Function: Handle Image Upload from Device
+    const handleImageUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setUploadingImage(true);
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        // 1. Upload to Supabase Storage
+        const { error: uploadError } = await supabase.storage
+            .from('blog-imagaes') // Must match your Bucket Name
+            .upload(filePath, file);
+
+        if (uploadError) {
+            alert("Error uploading image: " + uploadError.message);
+            setUploadingImage(false);
+            return;
+        }
+
+        // 2. Get Public URL
+        const { data } = supabase.storage
+            .from('blog-imagaes')
+            .getPublicUrl(filePath);
+
+        // 3. Set the URL to state so it can be saved to DB
+        setPostImage(data.publicUrl);
+        setUploadingImage(false);
+    };
+
+    const handleSubmitBlog = async (e) => {
+        e.preventDefault();
+        if(!user || !supabase) return;
+        setLoading(true);
+
+        const { error } = await supabase.from('blogs').insert([
+            { title: postTitle, content: postContent, image_url: postImage, date: postDate }
+        ]);
+
+        setLoading(false);
+        if(error) {
+            alert("Error posting: " + error.message);
+        } else {
+            alert("Blog Posted!");
+            setPostTitle(""); setPostContent(""); setPostImage(""); setPostDate("");
+        }
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
+            <div className="relative w-full max-w-lg bg-gray-900 border border-red-500/30 rounded-3xl p-8 shadow-2xl overflow-y-auto max-h-[90vh]">
+                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white"><X size={24} /></button>
+                
+                {!user ? (
+                    <>
+                        <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2"><Lock size={20} className="text-red-500"/> Admin Access</h2>
+                        <form onSubmit={handleLogin} className="space-y-4">
+                            <input type="email" placeholder="Admin Email" value={email} onChange={e=>setEmail(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" />
+                            <input type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" />
+                            <button type="submit" disabled={loading} className="w-full bg-red-600 text-white font-bold py-3 rounded-xl hover:bg-red-700">{loading ? "Checking..." : "Login"}</button>
+                        </form>
+                    </>
+                ) : (
+                    <>
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-2xl font-bold text-white">New Blog Post</h2>
+                            <button onClick={handleLogout} className="text-xs text-red-400 flex items-center gap-1 hover:text-white"><LogOut size={12}/> Logout</button>
+                        </div>
+                        <form onSubmit={handleSubmitBlog} className="space-y-4">
+                            <input type="text" placeholder="Blog Title" value={postTitle} onChange={e=>setPostTitle(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" required />
+                            <input type="text" placeholder="Date (e.g. Dec 25, 2024)" value={postDate} onChange={e=>setPostDate(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" required />
+                            
+                            {/* IMAGE UPLOAD SECTION */}
+                            <div className="w-full bg-white/5 border border-white/10 rounded-xl p-3">
+                                <label className="block text-gray-400 text-xs mb-2">Cover Image</label>
+                                <input 
+                                    type="file" 
+                                    accept="image/*" 
+                                    onChange={handleImageUpload} 
+                                    className="w-full text-gray-400 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-500 file:text-white hover:file:bg-red-600" 
+                                />
+                                {uploadingImage && <p className="text-red-400 text-xs mt-2">Uploading...</p>}
+                                {postImage && (
+                                    <div className="mt-2 relative h-32 w-full rounded-lg overflow-hidden border border-white/10">
+                                        <img src={postImage} alt="Preview" className="w-full h-full object-cover" />
+                                    </div>
+                                )}
+                            </div>
+
+                            <textarea rows="6" placeholder="Content..." value={postContent} onChange={e=>setPostContent(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white" required ></textarea>
+                            <button type="submit" disabled={loading || uploadingImage} className="w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-gray-200">{loading ? "Publishing..." : "Publish Post"}</button>
+                        </form>
+                    </>
+                )}
+            </div>
+        </motion.div>
+    );
+};
+// ==========================================
+// SECTION 3: PAGES
+// ==========================================
+
+const MAIN_PROJECTS = [
+  { title: "Furni Home", category: "Brand Identity", image: furniHomePng,  description: "Helping a local furniture maker reach customers beyond their showroom." },
+  { title: "Morning Brew", category: "Local Business", image: cafeImg,  description: "A warm digital space that mirrors the physical cafe experience." },
+  { title: "Modern Agency", category: "Portfolio", image: cubePng,  description: "Clean, direct messaging for a service-based business." },
+];
+const ALL_PROJECTS = [...MAIN_PROJECTS];
+
+const AllProjectsPage = () => {
+  const [hoveredIndex, setHoveredIndex] = useState(null);
+
+  return (
+    <div className="min-h-screen text-white p-6 md:p-12 relative overflow-hidden">
+      <style>{`@keyframes float { 0%, 100% { transform: translateY(0px) rotate(0deg); } 50% { transform: translateY(-20px) rotate(2deg); } } .animate-float { animation: float 6s ease-in-out infinite; }`}</style>
+      
+      <ParallaxGlassShape className="w-32 h-32 top-20 right-[5%] rotate-12 opacity-60" type="cube" speed={5} />
+      <ParallaxGlassShape className="w-20 h-20 bottom-32 left-[8%] -rotate-12 opacity-40" type="sphere" speed={1.2} />
+        
+      <CandyCane className="absolute w-16 h-16 md:w-24 md:h-24 top-40 right-4 md:right-10 opacity-60 rotate-12 z-[1]" />
+      
+      <nav className="flex justify-between items-center mb-10 md:mb-16 relative z-[2]">
+        <div className="z-50 relative flex items-center gap-3">
+             <img src={logoJpg} alt="Brand Logo" className="h-10 md:h-16 w-auto object-contain rounded-full"/>
+             <span className="text-white font-bold tracking-widest text-lg md:text-xl font-sans uppercase">Cube Devz</span>
+        </div>
+        <a href="/" className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"><ChevronLeft size={16} /> <span className="hidden md:inline">Back to Home</span><span className="md:hidden">Back</span></a>
+      </nav>
+
+      <motion.header initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeInUp} className="max-w-7xl mx-auto mb-12 md:mb-20 text-center relative z-[2]">
+        <div className="relative inline-block">
+            <h1 className="text-4xl md:text-7xl font-medium tracking-tight mb-4 md:mb-6">REAL RESULTS</h1>
+        </div>
+        <p className="text-gray-400 max-w-xl mx-auto text-sm md:text-base">See how we've helped business owners just like you.</p>
+      </motion.header>
+
+      <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-50px" }} variants={staggerContainer} className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 pb-20 relative z-[2]">
+        {ALL_PROJECTS.map((project, index) => (
+          <motion.div 
+            key={index} 
+            variants={fadeInUp} 
+            whileHover={ window.innerWidth > 768 ? { scale: 1.02 } : {} } 
+            onMouseEnter={() => setHoveredIndex(index)}
+            onMouseLeave={() => setHoveredIndex(null)}
+            className="group relative h-64 md:h-80 rounded-3xl overflow-hidden border border-white/10 bg-white/5 cursor-pointer hover:border-red-500/30 transition-colors"
+          >
+            <div className="absolute inset-0">
+            {project.video && hoveredIndex === index ? (
+                <video src={project.video} autoPlay muted loop playsInline preload="none" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+            ) : (
+                <img src={project.image} loading="lazy" alt={project.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-101 opacity-60 group-hover:opacity-40" />
+            )}
+            <div className="absolute inset-0 p-6 flex flex-col justify-end pointer-events-none">
+              <span className="text-red-400 text-[10px] font-bold tracking-wider uppercase mb-1">{project.category}</span>
+              <h3 className="text-xl font-medium leading-tight mb-2 group-hover:text-white transition-colors">{project.title}</h3>
+            </div>
+            </div>
+          </motion.div>
+        ))}
+      </motion.div>
+    </div>
+  );
+};
+
+const AboutPage = () => {
+  return (
+    <div className="min-h-screen text-white p-6 md:p-12 relative overflow-hidden">
+      <style>{`@keyframes float { 0%, 100% { transform: translateY(0px) rotate(0deg); } 50% { transform: translateY(-20px) rotate(2deg); } } .animate-float { animation: float 6s ease-in-out infinite; }`}</style>
+      
+      <ParallaxGlassShape className="w-32 h-32 top-20 right-[5%] rotate-12 opacity-60" type="cube" speed={5} />
+      <ParallaxGlassShape className="w-32 h-32 bottom-40 right-[10%] -rotate-12 opacity-50" type="sphere" speed={1.5} />
+        
+      <CandyCane className="absolute w-20 h-20 md:w-32 md:h-32 top-1/4 left-4 md:left-10 opacity-40 -rotate-45 z-[1]" />
+
+      <nav className="flex justify-between items-center mb-10 md:mb-16 relative z-[2]">
+        <div className="z-50 relative flex items-center gap-3">
+             <img src={logoJpg} alt="Brand Logo" className="h-10 md:h-16 w-auto object-contain rounded-full"/>
+             <span className="text-white font-bold tracking-widest text-lg md:text-xl font-sans uppercase">Cube Devz</span>
+        </div>
+        <a href="/" className="flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"><ChevronLeft size={16} /> <span className="hidden md:inline">Back to Home</span><span className="md:hidden">Back</span></a>
+      </nav>
+
+      <motion.header initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeInUp} className="max-w-4xl mx-auto mb-16 md:mb-24 text-center relative z-[2]">
+        <h1 className="text-4xl md:text-8xl font-medium tracking-tight mb-4 md:mb-8">WE ARE <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-green-400">LISTENERS.</span></h1>
+        <p className="text-gray-400 text-base md:text-lg leading-relaxed max-w-2xl mx-auto">We don't just build websites. We build relationships with business owners who want to grow.</p>
+      </motion.header>
+
+      <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer} className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-20 md:mb-32 relative z-[2]">
+        {[
+            { Icon: MessageCircle, title: "We Listen First", color: "text-red-400", desc: "No jargon. No assumptions. Just an honest conversation about your goals." },
+            { Icon: Users, title: "Human Centric", color: "text-green-400", desc: "We design for the real people who buy your products, not for awards." },
+            { Icon: Globe, title: "Real Growth", color: "text-yellow-400", desc: "We focus on metrics that matter: your sales, your leads, and your time." }
+        ].map((item, i) => (
+            <motion.div key={i} variants={fadeInUp} className="p-6 md:p-8 rounded-3xl border border-white/10 bg-white/5 h-full hover:bg-white/10 transition-colors relative">
+                <item.Icon className={`${item.color} mb-4`} size={32} />
+                <h3 className="text-xl font-bold mb-2">{item.title}</h3>
+                <p className="text-gray-400 text-sm">{item.desc}</p>
+                <SantaHatDecor className="absolute -top-4 -right-2 md:-top-6 md:-right-4 w-12 h-12 md:w-16 md:h-16 opacity-100" />
+            </motion.div>
+        ))}
+      </motion.div>
+    </div>
+  );
+};
+
+// ==========================================
+// SECTION 4: NAV & LANDING
+// ==========================================
+
+const Navbar = ({ onOpenContact, onAdminClick }) => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { lenis } = useLenis(); 
+
+  const handleScrollTo = (e, targetId) => {
+    e.preventDefault();
+    setIsMenuOpen(false);
+    if (lenis) {
+      lenis.scrollTo(targetId); 
+    } else {
+      const element = document.querySelector(targetId);
+      if(element) element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  return (
+    <>
+      <nav className="fixed top-0 left-0 w-full z-[80] flex justify-between items-center px-4 py-3 md:px-12 md:py-6 bg-black/50 backdrop-blur-md border-b border-white/5 transition-all duration-300">
+        <div className="z-50 relative flex items-center gap-2 md:gap-3 shrink-0">
+             <a href="/" className="relative flex items-center gap-2 cursor-pointer select-none">
+                <img src={logoJpg} alt="Brand Logo" className="h-8 md:h-16 w-auto object-contain rounded-full"/>
+                <span className="text-white font-bold tracking-widest text-sm md:text-xl font-sans uppercase whitespace-nowrap">Cube Devz</span>
+             </a>
+        </div>
+
+        <div className="hidden md:flex space-x-8 text-sm text-gray-300 font-medium items-center">
+          <a href="#home" onClick={(e) => handleScrollTo(e, '#home')} className="hover:text-white transition-colors">Home</a>
+          <a href="#projects" onClick={(e) => handleScrollTo(e, '#projects')} className="hover:text-white transition-colors relative group">Work</a>
+          <a href="#services" onClick={(e) => handleScrollTo(e, '#services')} className="hover:text-white transition-colors">Services</a>
+          <a href="#blogs" onClick={(e) => handleScrollTo(e, '#blogs')} className="hover:text-white transition-colors">Blog</a>
+          <a href="#faq" onClick={(e) => handleScrollTo(e, '#faq')} className="hover:text-white transition-colors">FAQ</a>
+        </div>
+
+        <div className="hidden md:flex items-center gap-6">
+          <div className="flex items-center gap-4 border-r border-white/20 pr-6">
+              <a href="https://www.instagram.com/cube.devz?igsh=YW9kMzdkbXE4ajNz" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-red-500 transition-colors" aria-label="Instagram"><Instagram size={20} /></a>
+              <a href="https://x.com/CubeDevz" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors" aria-label="X (Twitter)"><XSocialIcon size={18} /></a>
+          </div>
+          <button onClick={onOpenContact} className="bg-white text-black px-5 py-2 rounded-full text-xs font-bold hover:bg-gray-200 transition-colors">Let's Talk</button>
+        </div>
+
+        <button className="md:hidden text-white z-50 relative p-2" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+      </nav>
+
+      <div className={`fixed inset-0 bg-black z-[70] flex flex-col items-center justify-center space-y-8 transition-transform duration-300 ${isMenuOpen ? "translate-x-0" : "translate-x-full"}`}>
+           <a href="#home" onClick={(e) => handleScrollTo(e, '#home')} className="text-3xl text-white font-light">Home</a>
+           <a href="#projects" onClick={(e) => handleScrollTo(e, '#projects')} className="text-3xl text-white font-light">Work</a>
+           <a href="#services" onClick={(e) => handleScrollTo(e, '#services')} className="text-3xl text-white font-light">Services</a>
+           <a href="#blogs" onClick={(e) => handleScrollTo(e, '#blogs')} className="text-3xl text-white font-light">Blog</a>
+           <a href="#faq" onClick={(e) => handleScrollTo(e, '#faq')} className="text-3xl text-white font-light">FAQ</a>
+           
+           <div className="flex items-center gap-8 mt-4">
+              <a href="https://www.instagram.com/cube.devz?igsh=YW9kMzdkbXE4ajNz" target="_blank" rel="noopener noreferrer" className="text-white hover:text-red-500 transition-colors"><Instagram size={28} /></a>
+              <a href="https://x.com/CubeDevz" target="_blank" rel="noopener noreferrer" className="text-white hover:text-gray-300 transition-colors"><XSocialIcon size={24} /></a>
+           </div>
+
+           <button onClick={() => { setIsMenuOpen(false); onOpenContact(); }} className="mt-4 bg-white text-black px-8 py-3 rounded-full text-sm font-bold">Let's Talk</button>
+       </div>
+    </>
+  );
+};
+
+const Hero = () => (
+  <section id="home" className="relative min-h-screen flex flex-col items-center justify-center pt-20 overflow-hidden">
+    <style>{`@keyframes float { 0%, 100% { transform: translateY(0px) rotate(0deg); } 50% { transform: translateY(-30px) rotate(2deg); } } .animate-float { animation: float 4s ease-in-out infinite; }`}</style>
+    
+    <ParallaxGlassShape className="w-48 h-48 md:w-64 md:h-64 top-20 right-[15%] rotate-12 opacity-60" type="christmas" speed={5} />
+    <ParallaxGlassShape className="w-24 h-24 md:w-32 md:h-32 bottom-32 left-[10%] z-0 -rotate-12 opacity-50" type="sphere" speed={1.5} />
+    
+    <CandyCane className="absolute w-24 h-24 md:w-40 md:h-40 bottom-20 right-[10%] opacity-80 z-0" rotation={-20} />
+    
+    <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer} className="z-[2] text-center px-4 max-w-5xl mx-auto w-full flex flex-col items-center">
+      <motion.div variants={fadeInUp} className="mb-4 inline-block px-4 py-1 rounded-full border border-red-500/30 bg-red-500/10 text-red-400 text-xs tracking-widest uppercase">
+         We build your business
+      </motion.div>
+      
+      <motion.h1 variants={fadeInUp} className="text-4xl sm:text-6xl md:text-8xl font-medium text-white tracking-tight leading-[0.95] mb-6 relative w-full text-center">
+            <span className="relative inline-block">
+              <SantaHatDecor className="absolute -top-[35px] -left-[15px] md:-top-[60px] md:-left-[50px] w-16 h-16 md:w-32 md:h-32 -rotate-12 z-10" />
+              WE TRANSLATE
+            </span>
+            
+            <span className="block font-light italic opacity-90 text-red-500 mt-2">YOUR PASSION</span>
+            <span className="block text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-500">INTO REVENUE.</span>
+      </motion.h1>
+      
+      <motion.div variants={fadeInUp} className="mt-4 md:mt-8 max-w-xl mx-auto text-gray-400 text-xs md:text-base leading-relaxed px-4">
+        We understand your business, your struggles, and your customers—and translate that into revenue-driving digital experiences.
+      </motion.div>
+    </motion.div>
+  </section>
+);
+
+const Projects = () => {
+  const [hoveredIndex, setHoveredIndex] = useState(null);
+  const scrollContainerRef = useRef(null);
+  const openAllProjects = () => { window.location.href = "?view=all-projects"; };
+   
+  const scroll = (direction) => {
+    const container = scrollContainerRef.current;
+    if (container) {
+      const scrollAmount = container.clientWidth / (window.innerWidth < 768 ? 1 : 2);
+      container.scrollBy({ left: direction === "right" ? scrollAmount : -scrollAmount, behavior: "smooth" });
+    }
+  };
+
+  return (
+    <section id="projects" className="py-16 md:py-24 px-6 md:px-12 max-w-7xl mx-auto relative">
+      <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeInUp} className="flex flex-col md:flex-row justify-between items-end mb-8 md:mb-12 relative">
+        <div>
+            <div className="flex items-center relative">
+                <h2 className="text-3xl md:text-5xl text-white font-light">OUR WORK</h2>
+                <SantaHatDecor className="w-10 h-10 md:w-16 md:h-16 -mt-4 md:-mt-8 ml-2 md:ml-4 rotate-12 opacity-90" />
+            </div>
+            <p className="text-gray-400 text-sm mt-4 max-w-xs">We don't just make things look good. We make them work for your bottom line.</p>
+        </div>
+        <div className="hidden md:flex gap-4 mt-6 md:mt-0 z-[10]">
+          <button onClick={() => scroll("left")} className="p-3 rounded-full border border-white/20 bg-white/5 text-white hover:bg-white hover:text-black transition-all active:scale-95"><ChevronLeft size={20} /></button>
+          <button onClick={() => scroll("right")} className="p-3 rounded-full border border-white/20 bg-white/5 text-white hover:bg-white hover:text-black transition-all active:scale-95"><ChevronRight size={20} /></button>
+        </div>
+      </motion.div>
+
+      <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={fadeInUp} ref={scrollContainerRef} className="flex overflow-x-auto gap-4 md:gap-6 pb-8 snap-x snap-mandatory scrollbar-hide -mx-6 px-6 md:mx-0 md:px-0" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', willChange: 'scroll-position' }}>
+           {MAIN_PROJECTS.map((project, index) => (
+            <motion.div 
+              whileHover={ window.innerWidth > 768 ? { scale: 1.02 } : {} } 
+              transition={{ duration: 0.3 }} 
+              key={index} 
+              onMouseEnter={() => setHoveredIndex(index)} 
+              onMouseLeave={() => setHoveredIndex(null)} 
+              className="flex-none w-[85vw] md:w-[calc(50%-12px)] snap-center group relative h-80 md:h-96 rounded-3xl overflow-hidden border border-white/10 bg-white/5 cursor-pointer z-[2]"
+            >
+                <div className="absolute inset-0">
+                {project.video && hoveredIndex === index ? (
+                    <video src={project.video} autoPlay muted loop playsInline preload="none" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                ) : (
+                    <img src={project.image} loading="lazy" alt={project.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-101 opacity-60 group-hover:opacity-40" />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent pointer-events-none"></div>
+                </div>
+                <div className="absolute inset-0 p-6 md:p-8 flex flex-col justify-end pointer-events-none">
+                    <div className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                        <span className="text-red-400 text-xs font-bold tracking-wider uppercase mb-2 block">{project.category}</span>
+                        <h3 className="text-xl md:text-3xl text-white font-medium mb-2 leading-tight">{project.title}</h3>
+                        <p className="text-gray-400 text-sm max-w-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100 h-0 group-hover:h-auto overflow-hidden">{project.description}</p>
+                    </div>
+                </div>
+            </motion.div>
+            ))}
+      </motion.div>
+
+      <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeInUp} className="mt-4 md:mt-8 text-center z-[2] relative">
+        <button onClick={openAllProjects} className="text-white text-xs font-bold border-b border-white pb-1 hover:text-red-400 hover:border-red-400 transition-colors">SEE MORE RESULTS</button>
+      </motion.div>
+    </section>
+  );
+};
+
+const About = () => {
+  return (
+    <section id="about" className="relative py-12 md:py-24 px-6 md:px-12 max-w-7xl mx-auto">
+      {/* RESTORED GLASS SHAPES */}
+      <ParallaxGlassShape className="w-16 h-16 md:w-24 md:h-24 top-0 right-1/3 opacity-80 rotate-45" delay="-1s" type="cube" speed={0.8} />
+      <ParallaxGlassShape className="w-24 h-24 md:w-40 md:h-40 bottom-[-50px] right-0 opacity-60 -rotate-12" delay="-3s" type="christmas" speed={1.2} />
+      <CandyCane className="absolute w-20 h-20 md:w-32 md:h-32 top-10 left-4 md:left-10 opacity-50 z-[0]" rotation={15} />
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-start relative z-[2]">
+        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeInUp}>
+            <h2 className="text-3xl md:text-5xl text-white font-light mb-6">BEFORE WE DESIGN, <span className="text-red-500 italic">WE LISTEN.</span></h2>
+            <p className="text-gray-300 text-base md:text-lg leading-relaxed mb-6">
+                Most agencies want to sell you a website. We want to sell your product.
+            </p>
+            <p className="text-gray-400 text-sm md:text-base leading-relaxed mb-8">
+                We know the feeling of being misunderstood. You explain your vision, and they come back with something generic. At Cube Devz, we sit down with you. We learn about your late nights, your customers, and your goals. We don't just code; we care.
+            </p>
+            
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
+                <p className="text-white text-lg font-medium italic mb-4">"We believe small businesses are the heartbeat of our economy. You deserve the same high-quality digital tools the big guys have."</p>
+                <div className="flex items-center gap-3">
+                     <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center font-bold text-white">CD</div>
+                     <div>
+                        <p className="text-sm font-bold text-white">Founder, Cube Devz</p>
+                     </div>
+                </div>
+            </div>
+        </motion.div>
+
+        <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer} className="space-y-6">
+             <h3 className="text-xl font-bold text-white mb-6">HOW WE WORK</h3>
+             {[
+                { title: "1. We Listen", desc: "No tech jargon. Just coffee and a conversation about your business goals." },
+                { title: "2. We Plan", desc: "We map out a strategy that targets your ideal customer." },
+                { title: "3. We Build", desc: "We create a high-performance website designed to convert visitors." },
+                { title: "4. We Grow", desc: "We launch, and then we help you scale." }
+             ].map((step, i) => (
+                <motion.div key={i} variants={fadeInUp} className="flex gap-4 p-4 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/5">
+                    <div className="mt-1 text-red-500">
+                        <CheckCircle size={24} />
+                    </div>
+                    <div>
+                        <h4 className="text-white font-bold text-lg">{step.title}</h4>
+                        <p className="text-gray-400 text-sm mt-1">{step.desc}</p>
+                    </div>
+                </motion.div>
+             ))}
+        </motion.div>
+      </div>
+    </section>
+  );
+};
+
+const Services = ({ onOpenContact }) => (
+  <section id="services" className="py-16 md:py-24 px-6 md:px-12 max-w-7xl mx-auto">
+    <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer} className="flex flex-col md:flex-row justify-between items-end mb-10 md:mb-16">
+      <motion.div variants={fadeInUp}>
+            <h2 className="text-3xl md:text-5xl text-white font-light mb-4">RESULTS YOU CAN SEE</h2>
+            <p className="text-gray-400 text-sm max-w-sm">We don't sell features. We sell outcomes.</p>
+      </motion.div>
+      <motion.div variants={fadeInUp}>
+        <button onClick={onOpenContact} className="mt-6 md:mt-0 flex items-center space-x-2 bg-white text-black px-6 py-2 rounded-full text-xs font-bold hover:bg-gray-200 transition-colors">
+            <span>Start Growing</span><ArrowRight size={14} />
+        </button>
+      </motion.div>
+    </motion.div>
+
+    <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={staggerContainer} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {[
+        { id: "01", title: "WEBSITES THAT SELL", desc: "Turn curious visitors into paying customers with high-performance development.", img: "https://images.unsplash.com/photo-1517134191118-9d595e4c8c2b?auto=format&fit=crop&w=800&q=80" },
+        { id: "02", title: "DESIGNS THAT TRUST", desc: "Look professional, established, and trustworthy from the first click.", img: "https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=800&q=80" },
+        { id: "03", title: "SYSTEMS THAT WORK", desc: "Seamless payments and bookings so you can sleep while you earn.", img: "https://images.unsplash.com/photo-1556742031-c6961e8560b0?auto=format&fit=crop&w=800&q=80" }
+      ].map((service, index) => (
+        <motion.div key={service.id} variants={fadeInUp} className="group relative p-6 md:p-8 h-64 md:h-80 rounded-3xl border border-white/10 bg-white/5 hover:bg-white/10 transition-all duration-300 hover:-translate-y-2 flex flex-col justify-between overflow-hidden">
+            <div className="absolute inset-0 opacity-20 group-hover:opacity-40 transition-opacity duration-500">
+                <img src={service.img} loading="lazy" alt={service.title} className="w-full h-full object-cover" />
+            </div>
+            <CandyCane className="absolute -bottom-8 -right-8 w-24 h-24 opacity-20 group-hover:opacity-40 transition-opacity" rotation={45} />
+             
+            <div className="flex justify-between items-start z-[2]">
+                <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-white text-xs">{service.id}</div>
+            </div>
+            <div className="z-[2]">
+                <h3 className="text-xl text-white font-medium mb-2">{service.title}</h3>
+                <p className="text-gray-400 text-sm leading-relaxed max-w-xs">{service.desc}</p>
+            </div>
+        </motion.div>
+      ))}
+    </motion.div>
+  </section>
+);
+
+// ==========================================
+// SECTION: BLOG (New)
+// ==========================================
+
+const BlogSection = () => {
+  const [blogs, setBlogs] = useState([]);
+
+  useEffect(() => {
+    if (!supabase) return;
+    const fetchBlogs = async () => {
+      const { data, error } = await supabase.from('blogs').select('*').order('created_at', { ascending: false });
+      if (!error) setBlogs(data);
+    };
+    fetchBlogs();
+    
+    const subscription = supabase.channel('blogs').on('postgres_changes', { event: '*', schema: 'public', table: 'blogs' }, payload => {
+        fetchBlogs();
+    }).subscribe();
+    
+    return () => supabase.removeChannel(subscription);
+  }, []);
+
+  return (
+    <section id="blogs" className="relative py-20 md:py-32 px-6 md:px-12 max-w-7xl mx-auto overflow-hidden">
+      {/* Background Decoration */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-red-600/10 rounded-full blur-[100px] pointer-events-none z-0"></div>
+
+      <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeInUp} className="relative z-10 text-center mb-16 md:mb-20">
+        <h2 className="text-4xl md:text-6xl text-white font-medium tracking-tight mb-4">
+          LATEST <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-orange-500 italic pr-2">INSIGHTS</span>
+        </h2>
+        <p className="text-gray-400 text-base md:text-lg max-w-2xl mx-auto">
+          Thoughts on design, business strategy, and digital growth.
+        </p>
+      </motion.div>
+
+      {(!supabase || blogs.length === 0) ? (
+        <div className="relative z-10 flex flex-col items-center justify-center py-20 text-center border border-dashed border-white/10 rounded-3xl bg-white/5">
+          <div className="bg-white/10 p-4 rounded-full mb-4">
+             <MessageCircle className="text-gray-500" size={32} />
+          </div>
+          <p className="text-gray-400 text-lg">No stories have been told yet.</p>
+          <p className="text-gray-600 text-sm mt-1">Check back soon for updates.</p>
+        </div>
+      ) : (
+        /* CHANGED: grid-cols-2 instead of 3 to make boxes wider */
+        <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-10 max-w-6xl mx-auto">
+          {blogs.map((blog, index) => (
+            <motion.div
+              key={blog.id}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: index * 0.1 }}
+              whileHover={{ y: -8 }}
+              className="group relative flex flex-col h-full bg-[#0a0a0a] border border-white/10 rounded-3xl overflow-hidden transition-all duration-300 hover:border-red-500/30 hover:shadow-[0_10px_40px_-10px_rgba(220,38,38,0.15)]"
+            >
+              {/* CHANGED: 'aspect-video' allows the image to scale naturally with width without cutting off */}
+              <div className="relative aspect-video w-full overflow-hidden">
+                <img 
+                  src={blog.image_url} 
+                  alt={blog.title} 
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
+                />
+                
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-transparent to-transparent opacity-80" />
+                
+                <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full">
+                   <p className="text-[10px] font-bold text-red-400 tracking-widest uppercase">{blog.date}</p>
+                </div>
+              </div>
+
+              <div className="flex flex-col flex-grow p-6 md:p-8 relative -mt-8 z-20">
+                <h3 className="text-2xl md:text-3xl font-bold text-white mb-4 leading-tight group-hover:text-red-400 transition-colors">
+                  {blog.title}
+                </h3>
+                
+                <div className="w-12 h-0.5 bg-red-500/50 mb-4 group-hover:w-20 transition-all duration-300"></div>
+
+                <p className="text-gray-400 text-sm md:text-base leading-relaxed line-clamp-3 mb-8 flex-grow">
+                  {blog.content}
+                </p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+};
+// ==========================================
+// SECTION 5: FAQ
+// ==========================================
+
+const FAQ_DATA = [
+  { q: "Why do I need a website if I have Instagram?", a: "Instagram is rented land; algorithms change constantly. A website is your digital home that works 24/7. It builds credibility, answers questions automatically, and captures leads even while you sleep." },
+  { q: "Will a website actually get me more sales?", a: "Yes—if built correctly. We don't just design pretty pages; we build sales funnels. We structure your site to guide visitors clearly toward booking a call or making a purchase, removing the confusion that kills sales." },
+  { q: "How long does it take to build?", a: "Typically 2–4 weeks. We have a streamlined process so you are never left guessing. We'll give you a clear timeline at the start and stick to it." },
+  { q: "I don't have good text/content. Can you help?", a: "Absolutely. We don't expect you to be a writer. We help structure your content and write persuasive copy that sounds like you—but sells better." },
+  { q: "I'm not tech-savvy. Is that a problem?", a: "Not at all. That's our job. We handle all the technical heavy lifting—hosting, domains, coding—so you can focus on running your business." },
+  { q: "Will it work on mobile phones?", a: "100%. Most of your customers will visit from a phone. We design 'Mobile-First', meaning your site will feel like a smooth app on any device." },
+  { q: "Can my website grow with my business?", a: "Yes. We build scalable systems. Whether you need to add booking features, a blog, or an online store later, your foundation will be ready for it." },
+  { q: "What makes Cube Devz different?", a: "We aren't just developers; we are business partners. We focus on ROI and Clarity. If a feature doesn't help you build trust or make sales, we don't include it." },
+  { q: "Do you provide support after launch?", a: "Yes. We don't just disappear. We offer post-launch support to ensure everything runs smoothly and to help you with any small updates you need." },
+  { q: "Is this good for small creative businesses?", a: "It's perfect for them. Whether you are a creator, artist, crochet brand, or consultant, we help you look professional and established without losing your unique personality." },
+];
+
+const FAQ = () => {
+  const [openIndex, setOpenIndex] = useState(null);
+
+  return (
+    <section id="faq" className="py-16 md:py-24 px-6 md:px-12 max-w-4xl mx-auto">
+      <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeInUp} className="text-center mb-12">
+        <h2 className="text-3xl md:text-5xl font-light italic mb-4 text-red-500 ">FAQ<span className=" text-white italic">s</span></h2>
+        <p className="text-gray-400 text-sm">Everything you need to know about working with us.</p>
+      </motion.div>
+
+      <div className="space-y-4">
+        {FAQ_DATA.map((item, index) => (
+          <motion.div 
+            key={index} 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: index * 0.05 }}
+            className="border-b border-white/10 last:border-0"
+          >
+            <button 
+              onClick={() => setOpenIndex(openIndex === index ? null : index)}
+              className="w-full flex justify-between items-center py-5 text-left group"
+            >
+              <span className={`text-lg md:text-xl font-medium transition-colors ${openIndex === index ? 'text-white' : 'text-gray-300 group-hover:text-red-400'}`}>
+                {item.q}
+              </span>
+              <span className={`ml-4 transition-transform duration-300 ${openIndex === index ? 'rotate-180 text-red-500' : 'text-gray-500'}`}>
+                {openIndex === index ? <Minus size={20} /> : <Plus size={20} />}
+              </span>
+            </button>
+            <AnimatePresence>
+              {openIndex === index && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                  className="overflow-hidden"
+                >
+                  <p className="pb-6 text-gray-400 text-sm md:text-base leading-relaxed pr-8">
+                    {item.a}
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        ))}
+      </div>
+    </section>
+  );
+};
+
+const Footer = ({ onOpenContact }) => (
+  <section className="relative pt-24 pb-12 px-6 flex flex-col items-center justify-center text-center overflow-hidden">
+    {/* RESTORED GLASS SHAPES */}
+    <ParallaxGlassShape className="w-64 h-24 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-30 -rotate-12 blur-sm" type="cube" speed={0.6} />
+      
+    <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer} className="z-[2] w-full max-w-5xl">
+      <motion.div variants={fadeInUp} className="relative inline-block">
+        <SantaHatDecor className="absolute -top-8 -right-4 md:-top-12 md:right-0 w-16 h-16 md:w-24 md:h-24 rotate-12 opacity-90" />
+        <h2 className="text-3xl md:text-6xl text-white font-medium tracking-tight mb-2">READY TO</h2>
+        <h2 className="text-3xl md:text-6xl text-white font-light italic mb-2">GROW</h2>
+        <h2 className="text-3xl md:text-6xl text-white font-medium tracking-tight mb-8">YOUR BUSINESS?</h2>
+      </motion.div>
+      <motion.p variants={fadeInUp} className="text-gray-400 text-xs md:text-sm max-w-md mx-auto mb-10">Stop guessing. Start growing. Let's build something great together.</motion.p>
+      <motion.div variants={fadeInUp}>
+        <button onClick={onOpenContact} className="flex items-center space-x-2 bg-white text-black px-8 py-3 rounded-full text-xs font-bold hover:scale-105 transition-transform mx-auto">
+            <span>Book A Call Now</span><ArrowRight size={14} />
+        </button>
+      </motion.div>
+
+      <motion.div variants={fadeInUp} className="mt-16 md:mt-24 pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-6">
+        <p className="text-gray-500 text-xs">© 2026 Cube Devz. All Rights Reserved.</p>
+          
+        <div className="flex items-center gap-6">
+          <a href="https://www.instagram.com/cube.devz?igsh=YW9kMzdkbXE4ajNz" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-red-500 transition-colors" aria-label="Instagram"><Instagram size={24} /></a>
+          <a href="https://x.com/CubeDevz" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors" aria-label="X (Twitter)"><XSocialIcon size={22} /></a>
+        </div>
+      </motion.div>
+
+    </motion.div>
+  </section>
+);
+
+const MainLandingPage = ({ onOpenContact }) => {
+  return (
+    <main className="w-full overflow-x-hidden">
+      <Hero />
+      <About />
+      <Projects />
+      <Services onOpenContact={onOpenContact} />
+      {/* ADDED FAQ SECTION HERE */}
+      <BlogSection />
+      <FAQ />
+      <Footer onOpenContact={onOpenContact} />
+    </main>
+  );
+};
+
+const App = () => {
+  const [isContactOpen, setIsContactOpen] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [currentView, setCurrentView] = useState("home");
+  const isMobile = useIsMobile(); // Use the hook here
+
+  // KEYBOARD LISTENER FOR ADMIN LOGIN (Ctrl + Shift + X)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+        if (e.ctrlKey && e.shiftKey && (e.key === 'x' || e.key === 'X')) {
+            e.preventDefault();
+            setIsAdminOpen(prev => !prev);
+        }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    // 1. Initialize with your Measurement ID (Get this from Google Analytics Admin)
+    ReactGA.initialize("G-SKZQQS24T0"); 
+
+    // 2. Send the "Page View" signal immediately when site opens
+    ReactGA.send({ 
+      hitType: "pageview", 
+      page: window.location.pathname + window.location.search,
+      title: "Home Page"
+    });
+  }, []);
+  
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const view = params.get("view");
+    if (view === "all-projects") {
+      setCurrentView("all-projects");
+    } else if (view === "about") {
+      setCurrentView("about");
+    }
+  }, []);
+
+  // Define the content separately to avoid code duplication
+  const content = currentView === "all-projects" ? (<AllProjectsPage />) : currentView === "about" ? (<AboutPage />) : (
+    <>
+        <Navbar onOpenContact={() => setIsContactOpen(true)} onAdminClick={() => setIsAdminOpen(true)} />
+        <MainLandingPage onOpenContact={() => setIsContactOpen(true)} />
+    </>
+  );
+
+  return (
+    <SmoothScrollWrapper> 
+        <div className="bg-black min-h-screen font-sans selection:bg-red-500 selection:text-white pb-12 overflow-x-hidden w-full">
+        <style>{`html { scroll-behavior: auto; } body { overflow-x: hidden; width: 100%; }`}</style>
+          
+        {/* SnowOverlay will now return null internally if mobile */}
+        <SnowOverlay />
+
+        <PromoSanta />
+        
+        {/* BLOB CURSOR: Already correct (hidden on mobile) */}
+        {!isMobile && (
+          <BlobCursor blobType="circle" fillColor="#D42426" trailCount={3} sizes={[60, 50, 75]} innerSizes={[20, 35, 25]} innerColor="rgba(255,255,255,0.8)" opacities={[0.6, 0.6, 0.6]} shadowColor="rgba(0,0,0,0.75)" shadowBlur={5} shadowOffsetX={10} shadowOffsetY={10} filterStdDeviation={30} useFilter={true} fastDuration={0.1} slowDuration={0.5} zIndex={0} />
+        )}
+
+        {/* CLICK SPARK: Only wrap if NOT mobile */}
+        {isMobile ? (
+           <div className="w-full h-full">
+             {content}
+           </div>
+        ) : (
+           <ClickSpark sparkColor="#343c42ff" sparkSize={20} sparkRadius={20} sparkCount={8} duration={400}>
+             {content}
+           </ClickSpark>
+        )}
+
+        <ContactModal isOpen={isContactOpen} onClose={() => setIsContactOpen(false)} />
+        <AdminModal isOpen={isAdminOpen} onClose={() => setIsAdminOpen(false)} />
+        </div>
+    </SmoothScrollWrapper>
+  );
+};
+
+export default App;
